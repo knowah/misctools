@@ -1,0 +1,37 @@
+#!/usr/bin/python3
+
+import argparse
+import gzip
+import sys
+
+parser = argparse.ArgumentParser(description="Removes non-canonical chromsomes from reference FastA file.\nNon-canonical chromsomes are defined as any whose name contains a '_'")
+parser.add_argument("ref_file", type=str, help="Input FastA reference. Can be gzipped.")
+parser.add_argument("out_file", type=str, nargs='?', default='-', help="Output FastA file. If missing or -, will write to stdout.\nWill be gzipped if filename ends with .gz")
+args = parser.parse_args()
+
+# process input file name
+if args.ref_file.endswith('.gz'):
+	fopenIN = gzip.open
+else:
+	fopenIN = open
+
+# process output file name
+if args.out_file == '-':
+	outf = sys.stdout
+elif args.out_file.endswith('.gz'):
+	outf = gzip.open(args.out_file, 'wt')
+else:
+	outf = open(args.out_file, 'wt')
+
+with fopenIN(args.ref_file, 'rt') as inf:
+	include = False
+	for line in inf:
+		if line.startswith('>'):
+			if '_' in line.split()[0]:
+				include = False
+			else:
+				include = True
+		if include:
+			outf.write(line)
+
+outf.close()

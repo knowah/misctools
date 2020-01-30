@@ -1,0 +1,25 @@
+#!/bin/bash
+
+ubdg="$1"
+
+[ ! -e "$ubdg" ] && "Input file $ubdg does not exist. Exiting." && exit
+genomef="$2"
+
+basenm="${ubdg%.bdg}"
+basenm="${basenm%.bedGraph}"
+sbdg="${basenm}.sorted.bdg"
+sortedExisted=false
+bwf="${basenm}.bw"
+
+[ -e "$basenm" ] && echo "BigWig file $bwf already exists. Skipping." && exit
+
+if [ -e "$sbdg" ]; then
+	sortedExisted=true
+	echo "$ubdg - Sorted bedgraph file ${sbdg} already exists, using that"
+else
+	sort -k1,1 -k2,2n "$ubdg" > "$sbdg"
+fi
+
+bedGraphToBigWig "$sbdg" "$genomef" "$bwf"
+
+$sortedExisted || rm "$sbdg"

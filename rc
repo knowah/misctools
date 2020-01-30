@@ -1,0 +1,53 @@
+#!/usr/bin/python3
+
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("seq")
+parser.add_argument("--rna", action="store_true")
+args = parser.parse_args()
+
+char_dict = {
+	'A': 'T',
+	'C': 'G',
+	'G': 'C',
+	'T': 'A',
+	'R': 'Y',
+	'Y': 'R',
+	'S': 'W',
+	'W': 'S',
+	'K': 'M',
+	'M': 'K',
+	'B': 'V',
+	'V': 'B',
+	'D': 'H',
+	'H': 'D',
+	'N': 'N',
+	'a': 't',
+	'c': 'g',
+	'g': 'c',
+	't': 'a',
+	'r': 'y',
+	'y': 'r',
+	's': 'w',
+	'w': 's',
+	'k': 'm',
+	'm': 'k',
+	'b': 'v',
+	'v': 'b',
+	'd': 'h',
+	'h': 'd',
+	'n': 'n',
+	'.': '.',
+	'-': '-'
+}
+
+if args.rna:
+	char_dict['A'] = 'U'
+	char_dict['U'] = 'A'
+	del char_dict['T']
+	char_dict['a'] = 'u'
+	char_dict['u'] = 'a'
+	del char_dict['t']
+
+print("".join([char_dict[x] for x in args.seq][::-1]))

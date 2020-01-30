@@ -1,0 +1,29 @@
+#!/usr/bin/python2.7
+import argparse
+from math import log
+from sys import stdin
+parser=argparse.ArgumentParser(description="Convert bytes to human-readable format")
+outfmt=parser.add_mutually_exclusive_group()
+outfmt.add_argument("-b", "--binary", action="store_true", help="Use binary (1024-based) units")
+outfmt.add_argument("-d", "--decimal", action="store_true", help="Use decimal (1000-based) units")
+parser.add_argument("--reverse", action="store_true", help="Unimplemented. Convert human readable number to bytes")
+args = parser.parse_args()
+
+if not args.binary and not args.decimal:
+	args.binary=True
+
+dec_pref = ['', 'K', 'M', 'G', 'T', 'P']
+def convert(size, decimal=False):
+	if decimal:
+		prefixes = dec_pref
+		base = 1000
+	else:
+		prefixes = [''] + [p+'i' for p in dec_pref[1:]]
+		base = 2**10
+	magnitude = int(log(size, base))
+	coef = 1.0 * size / base**magnitude
+	decpts = str(1 if coef < 10.0 else 0)
+	return ("{0:."+decpts+"f} {1}B").format(coef,prefixes[magnitude])
+
+for line in stdin.readlines():
+	print convert(long(line.strip()), decimal=args.decimal)

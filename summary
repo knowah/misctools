@@ -1,0 +1,7 @@
+#!/usr/bin/Rscript
+
+# outputs a statistical summary of data from stdin
+
+input <- file('stdin', 'r')
+data <- readLines(input)
+print(summary(as.numeric(data)))

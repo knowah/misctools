@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+
+import sys
+import argparse
+from colorama import Fore, Style
+import subprocess
+
+parser = argparse.ArgumentParser()
+parser.add_argument("fastq_file", type=str, nargs="?", default="-", help="FastQ file (use - or omit for stdin)")
+parser.add_argument("-B", "--quality_basis", type=str, default="!", help="Character representing Phred score of 0")
+parser.add_argument("-r", "--read_names", action="store_true", help="Output read name before each read")
+parser.add_argument("-L", "--read_length", action="store_true", help="Output read length before each read")
+parser.add_argument("-w", "--width", type=int, default=0, help="Width of sequence output. 0 = use terminal width (fallback: 80); -1 = do not split sequence into lines (may cause buffering issues)")
+args = parser.parse_args()
+
+# quality score basis
+Q_BASIS = ord(args.quality_basis)
+
+# define width of output
+if args.width == 0:
+    try:
+        args.width = int(subprocess.check_output(['tput','cols']).decode().split()[0])
+    except Exception:
+        args.width = 80
+# alternative to the aboveif tput not available
+# (does not work if receiving input via terminal pipe)
+#import shutil
+#term_width = shutil.get_terminal_size((80,20)).columns
+
+# convert (base-0) quality scores to colors
+def q_to_color(q):
+    if q < 6:
+        return Fore.RED
+    if q < 10:
+        return Fore.YELLOW
+    if q < 20:
+        return Fore.CYAN
+    return Fore.GREEN
+
+with open(args.fastq_file, 'r') if args.fastq_file is not "-" else sys.stdin as f:
+    lineno = 0
+    curr_seq = None
+    curr_header = []
+    for line in f.readlines():
+        # save read name if requested
+        if args.read_names and lineno % 4 == 0:
+            curr_header += [line.rstrip('\n')]
+
+        # get sequence
+        if lineno % 4 == 1:
+            curr_seq = line.rstrip('\n')
+            # determine seq length if requested
+            if args.read_length:
+                curr_header += ["{} bp".format(len(curr_seq))]
+
+        # read quality scores
+        elif lineno % 4 == 3:
+            curr_q = line.rstrip('\n')
+
+            if len(curr_header) > 0:
+                print(" :: ".join(curr_header))
+                curr_header = []
+
+            try:
+                prev_color = None
+                char_no = 0
+
+                # iterate through quality scores
+                for base_idx in range(len(curr_seq)):
+                    char_no += 1
+                    base_color = q_to_color(ord(curr_q[base_idx]) - Q_BASIS)
+
+                    # print called base with color; color control char
+                    # is only printed if different from the previous
+                    if base_color == prev_color:
+                        print(curr_seq[base_idx], end='')
+                    else:
+                        print("{}".format(base_color) + curr_seq[base_idx], end='')
+                        prev_color = base_color
+                    
+                    # insert newline where required
+                    if args.width > 0 and char_no % args.width == 0:
+                        print('')          # insert newline
+                        prev_color = None  # reset color
+
+                # remove color and flush output buffer at end of read
+                print("{}".format(Style.RESET_ALL), flush=True)
+
+            # handle break in stdin / Ctrl+C
+            except (KeyboardInterrupt, BrokenPipeError):
+                print("{}".format(Style.RESET_ALL), flush=True)
+                break
+        lineno += 1
+
+sys.stderr.close()  # required to prevent error message on Ctrl+C
